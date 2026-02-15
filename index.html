@@ -153,6 +153,25 @@
       box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
     }
 
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .checkbox-group label {
+      margin: 0;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
     .button-group {
       display: flex;
       gap: 12px;
@@ -420,6 +439,22 @@
       border-bottom-left-radius: 4px;
     }
 
+    .message.assistant .message-content.streaming {
+      border-color: #ffc107;
+      position: relative;
+    }
+
+    .message.assistant .message-content.streaming::after {
+      content: '▊';
+      animation: blink 1s infinite;
+      margin-left: 2px;
+    }
+
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+
     .message-label {
       font-size: 11px;
       color: #999;
@@ -545,7 +580,12 @@
         </div>
       </div>
 
-      <div class="button-group">
+      <div class="checkbox-group">
+        <input type="checkbox" id="enableStreaming" checked>
+        <label for="enableStreaming">Enable Streaming (see responses word-by-word)</label>
+      </div>
+
+      <div class="button-group" style="margin-top: 16px;">
         <button class="btn-test" onclick="testConnection()">🔍 Test Connection</button>
         <button class="btn-primary" onclick="saveConfig()">💾 Save & Connect</button>
         <button class="btn-secondary" onclick="loadModels()">📋 List Models</button>
@@ -582,12 +622,14 @@
       ip: 'localhost',
       port: '8000',
       apiKey: '',
-      selectedModel: null
+      selectedModel: null,
+      streaming: true
     };
 
     let isConnected = false;
     let availableModels = [];
     let conversationHistory = [];
+    let currentStreamingMessage = null;
 
     // Load saved config on startup
     window.onload = function() {
@@ -602,6 +644,7 @@
           document.getElementById('ipAddress').value = savedConfig.ip || 'localhost';
           document.getElementById('port').value = savedConfig.port || '8000';
           document.getElementById('apiKey').value = savedConfig.apiKey || '';
+          document.getElementById('enableStreaming').checked = savedConfig.streaming !== false;
           config = savedConfig;
           showStatus('📂 Loaded saved configuration. Click "Test Connection" to verify.', 'info');
         } catch (e) {
@@ -624,19 +667,20 @@
       }
     }
 
-    function saveConfig() {
-      const ip = document.getElementById('ipAddress').value.trim();
-      const port = document.getElementById('port').value.trim();
-      const apiKey = document.getElementById('apiKey').value.trim();
+    function updateConfigFromInputs() {
+      config.ip = document.getElementById('ipAddress').value.trim();
+      config.port = document.getElementById('port').value.trim();
+      config.apiKey = document.getElementById('apiKey').value.trim();
+      config.streaming = document.getElementById('enableStreaming').checked;
+    }
 
-      if (!ip || !port) {
+    function saveConfig() {
+      updateConfigFromInputs();
+
+      if (!config.ip || !config.port) {
         showStatus('❌ Please enter both IP address and Port', 'error');
         return;
       }
-
-      config.ip = ip;
-      config.port = port;
-      config.apiKey = apiKey;
 
       localStorage.setItem('cynthyAI_config', JSON.stringify(config));
       showStatus('✅ Configuration saved to browser storage', 'success');
@@ -654,6 +698,9 @@
     }
 
     async function testConnection() {
+      // CRITICAL: Update config from inputs FIRST
+      updateConfigFromInputs();
+      
       updateConnectionStatus('testing', 'Testing...');
       showStatus('🔍 Testing connection to server...', 'info');
       clearDiagnostics();
@@ -663,15 +710,18 @@
       
       const url = buildUrl('/v1/models');
       
+      addDiagnostic('Current IP', config.ip);
+      addDiagnostic('Current Port', config.port);
       addDiagnostic('Target URL', url);
       addDiagnostic('Method', 'GET');
       addDiagnostic('API Key', config.apiKey ? '***' + config.apiKey.slice(-4) : 'Not set');
+      addDiagnostic('Streaming', config.streaming ? 'Enabled' : 'Disabled');
       
       try {
         const startTime = Date.now();
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
         
         const response = await fetch(url, {
           method: 'GET',
@@ -763,6 +813,8 @@
     }
 
     async function loadModels() {
+      updateConfigFromInputs();
+      
       if (!config.ip || !config.port) {
         showStatus('❌ Please configure IP and Port first', 'error');
         return;
@@ -792,7 +844,6 @@
           displayModels(data.data);
           showStatus(`✅ Found ${data.data.length} model(s)`, 'success');
           
-          // Auto-select first model if none selected
           if (!config.selectedModel && data.data.length > 0) {
             config.selectedModel = data.data[0].id;
             localStorage.setItem('cynthyAI_config', JSON.stringify(config));
@@ -875,7 +926,6 @@
       const item = document.createElement('div');
       item.className = 'diagnostic-item';
       
-      // Handle multi-line values
       const displayValue = String(value).replace(/\n/g, '<br>');
       
       item.innerHTML = `<span class="diagnostic-label">${label}:</span><span class="diagnostic-value">${displayValue}</span>`;
@@ -911,7 +961,6 @@
       statusDiv.className = `status-message ${type}`;
       statusDiv.style.display = 'block';
       
-      // Auto-hide success messages after 5 seconds
       if (type === 'success') {
         setTimeout(() => {
           statusDiv.style.display = 'none';
@@ -919,30 +968,36 @@
       }
     }
 
-    function addMessageToUI(role, content) {
+    function addMessageToUI(role, content, isStreaming = false) {
       const chatContainer = document.getElementById('chatContainer');
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${role}`;
       
       const label = role === 'user' ? 'You' : "Cynthy's AI";
       
-      messageDiv.innerHTML = `
-        <div class="message-label">${label}</div>
-        <div class="message-content">${escapeHtml(content)}</div>
-      `;
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'message-content';
+      if (isStreaming) {
+        contentDiv.classList.add('streaming');
+      }
+      contentDiv.textContent = content;
+      
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'message-label';
+      labelDiv.textContent = label;
+      
+      messageDiv.appendChild(labelDiv);
+      messageDiv.appendChild(contentDiv);
       
       chatContainer.appendChild(messageDiv);
       chatContainer.scrollTop = chatContainer.scrollHeight;
+      
+      return contentDiv;
     }
 
     function addMessage(role, content) {
-      // Add to UI
       addMessageToUI(role, content);
-      
-      // Add to history
       conversationHistory.push({ role, content });
-      
-      // Save to localStorage
       localStorage.setItem('cynthyAI_history', JSON.stringify(conversationHistory));
     }
 
@@ -972,21 +1027,23 @@
 
       try {
         const modelToUse = config.selectedModel || availableModels[0]?.id || 'gpt-3.5-turbo';
-        
         const url = buildUrl('/v1/chat/completions');
         
+        const requestBody = {
+          model: modelToUse,
+          messages: conversationHistory,
+          max_tokens: 2000,
+          temperature: 0.7,
+          stream: config.streaming
+        };
+
         const response = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             ...(config.apiKey && { 'Authorization': `Bearer ${config.apiKey}` })
           },
-          body: JSON.stringify({
-            model: modelToUse,
-            messages: conversationHistory,
-            max_tokens: 2000,
-            temperature: 0.7
-          })
+          body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
@@ -994,13 +1051,66 @@
           throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
-        const data = await response.json();
-        
-        if (data.choices && data.choices[0] && data.choices[0].message) {
-          const assistantMessage = data.choices[0].message.content;
-          addMessage('assistant', assistantMessage);
+        if (config.streaming) {
+          // Handle streaming response
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let accumulatedContent = '';
+          
+          currentStreamingMessage = addMessageToUI('assistant', '', true);
+          
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              const chunk = decoder.decode(value, { stream: true });
+              const lines = chunk.split('\n');
+              
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const data = line.slice(6);
+                  
+                  if (data === '[DONE]') continue;
+                  
+                  try {
+                    const parsed = JSON.parse(data);
+                    const content = parsed.choices[0]?.delta?.content;
+                    
+                    if (content) {
+                      accumulatedContent += content;
+                      currentStreamingMessage.textContent = accumulatedContent;
+                      
+                      const chatContainer = document.getElementById('chatContainer');
+                      chatContainer.scrollTop = chatContainer.scrollHeight;
+                    }
+                  } catch (e) {
+                    // Ignore JSON parse errors for incomplete chunks
+                  }
+                }
+              }
+            }
+            
+            // Streaming complete
+            currentStreamingMessage.classList.remove('streaming');
+            conversationHistory.push({ role: 'assistant', content: accumulatedContent });
+            localStorage.setItem('cynthyAI_history', JSON.stringify(conversationHistory));
+            currentStreamingMessage = null;
+            
+          } catch (streamError) {
+            throw new Error("Sorry, I couldn't stream the response. The connection was interrupted.");
+          }
+          
         } else {
-          throw new Error('Invalid response format from server');
+          // Handle non-streaming response
+          const data = await response.json();
+          
+          if (data.choices && data.choices[0] && data.choices[0].message) {
+            const assistantMessage = data.choices[0].message.content;
+            addMessage('assistant', assistantMessage);
+          } else {
+            throw new Error('Invalid response format from server');
+          }
         }
         
       } catch (error) {
@@ -1010,18 +1120,30 @@
         conversationHistory.pop();
         localStorage.setItem('cynthyAI_history', JSON.stringify(conversationHistory));
         
-        addMessage('assistant', `❌ Error: ${error.message}\n\nPlease check your connection and try again.`);
-        showStatus(`❌ Failed to send message: ${error.message}`, 'error');
+        // Friendly error message
+        let errorMessage = "申し訳ございません (I'm sorry), I couldn't process your request. ";
         
-        // Update connection status
-        isConnected = false;
-        updateConnectionStatus('disconnected', 'Connection Lost ✗');
-        disableChat();
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          errorMessage += "The connection to the server was lost. Please check your connection and try again.";
+        } else if (error.message.includes('stream')) {
+          errorMessage += error.message;
+        } else {
+          errorMessage += `Error: ${error.message}`;
+        }
+        
+        addMessage('assistant', errorMessage);
+        showStatus(`❌ ${errorMessage}`, 'error');
+        
+        // Update connection status if it looks like we lost connection
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          isConnected = false;
+          updateConnectionStatus('disconnected', 'Connection Lost ✗');
+          disableChat();
+        }
       } finally {
         sendButton.disabled = false;
         sendButton.textContent = 'SEND';
         
-        // Re-enable if still connected
         if (isConnected) {
           enableChat();
         }
