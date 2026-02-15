@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Local API Chat Client</title>
+  <title>Cynthy's AI</title>
   <style>
     * {
       margin: 0;
@@ -12,43 +12,117 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', sans-serif;
+      background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
       min-height: 100vh;
       padding: 20px;
     }
 
     .container {
-      max-width: 800px;
+      max-width: 900px;
       margin: 0 auto;
       background: white;
-      border-radius: 12px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
       overflow: hidden;
+      border: 2px solid #1a237e;
     }
 
     .header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
       color: white;
-      padding: 20px;
+      padding: 24px;
       text-align: center;
+      position: relative;
+      border-bottom: 4px solid #ffd700;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+      font-weight: 300;
+    }
+
+    .header p {
+      font-size: 13px;
+      opacity: 0.9;
+      letter-spacing: 1px;
+    }
+
+    .connection-indicator {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .connection-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.15);
+      padding: 8px 16px;
+      border-radius: 24px;
+      font-size: 12px;
+      font-weight: 600;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #dc3545;
+      animation: pulse 2s infinite;
+      box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+    }
+
+    .status-dot.connected {
+      background: #4caf50;
+      animation: none;
+      box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+    }
+
+    .status-dot.testing {
+      background: #ffc107;
+      animation: pulse 1s infinite;
+      box-shadow: 0 0 8px rgba(255, 193, 7, 0.6);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.9); }
     }
 
     .config-section {
-      padding: 20px;
-      background: #f7f7f7;
-      border-bottom: 1px solid #e0e0e0;
+      padding: 24px;
+      background: #f5f7fa;
+      border-bottom: 2px solid #e0e0e0;
     }
 
     .config-section.hidden {
       display: none;
     }
 
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a237e;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
     .config-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
-      margin-bottom: 15px;
+      grid-template-columns: 2fr 1fr 2fr;
+      gap: 16px;
+      margin-bottom: 16px;
     }
 
     .input-group {
@@ -59,88 +133,264 @@
     label {
       font-size: 12px;
       font-weight: 600;
-      color: #666;
-      margin-bottom: 5px;
+      color: #555;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
     }
 
-    input {
-      padding: 10px;
-      border: 2px solid #e0e0e0;
-      border-radius: 6px;
+    input, select {
+      padding: 12px;
+      border: 2px solid #d0d7de;
+      border-radius: 8px;
       font-size: 14px;
-      transition: border-color 0.3s;
+      transition: all 0.3s;
+      background: white;
     }
 
-    input:focus {
+    input:focus, select:focus {
       outline: none;
-      border-color: #667eea;
+      border-color: #1a237e;
+      box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
     }
 
     .button-group {
       display: flex;
-      gap: 10px;
+      gap: 12px;
+      flex-wrap: wrap;
     }
 
     button {
-      padding: 10px 20px;
+      padding: 12px 24px;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s;
+      font-size: 14px;
+      letter-spacing: 0.5px;
     }
 
     .btn-primary {
-      background: #667eea;
+      background: #1a237e;
       color: white;
       flex: 1;
+      min-width: 140px;
     }
 
-    .btn-primary:hover {
-      background: #5568d3;
+    .btn-primary:hover:not(:disabled) {
+      background: #0d47a1;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);
     }
 
     .btn-secondary {
-      background: #e0e0e0;
-      color: #333;
+      background: white;
+      color: #1a237e;
+      border: 2px solid #1a237e;
+      flex: 1;
+      min-width: 120px;
     }
 
     .btn-secondary:hover {
-      background: #d0d0d0;
+      background: #f5f7fa;
     }
 
-    .status {
-      padding: 10px;
-      background: #fff3cd;
+    .btn-test {
+      background: #ffc107;
+      color: #1a237e;
+      font-weight: 700;
+      min-width: 160px;
+    }
+
+    .btn-test:hover:not(:disabled) {
+      background: #ffb300;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .status-message {
+      padding: 12px 16px;
       border-left: 4px solid #ffc107;
-      margin-top: 15px;
+      margin-top: 16px;
       border-radius: 4px;
+      font-size: 13px;
+      display: none;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .status-message.info {
+      background: #e3f2fd;
+      border-color: #2196f3;
+      color: #0d47a1;
+    }
+
+    .status-message.success {
+      background: #e8f5e9;
+      border-color: #4caf50;
+      color: #1b5e20;
+    }
+
+    .status-message.error {
+      background: #ffebee;
+      border-color: #f44336;
+      color: #b71c1c;
+    }
+
+    .status-message.warning {
+      background: #fff3e0;
+      border-color: #ff9800;
+      color: #e65100;
+    }
+
+    .diagnostics {
+      margin-top: 16px;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      border: 2px solid #e0e0e0;
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      display: none;
+    }
+
+    .diagnostics.show {
+      display: block;
+    }
+
+    .diagnostics-title {
+      font-weight: 700;
+      color: #1a237e;
+      margin-bottom: 8px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .diagnostic-item {
+      padding: 6px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .diagnostic-item:last-child {
+      border-bottom: none;
+    }
+
+    .diagnostic-label {
+      color: #666;
+      font-weight: 600;
+    }
+
+    .diagnostic-value {
+      color: #1a237e;
+      margin-left: 8px;
+    }
+
+    .models-section {
+      margin-top: 16px;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      border: 2px solid #1a237e;
+      display: none;
+    }
+
+    .models-section.show {
+      display: block;
+    }
+
+    .models-title {
+      font-weight: 700;
+      color: #1a237e;
+      margin-bottom: 12px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .model-item {
+      padding: 10px 12px;
+      background: #f5f7fa;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      border: 1px solid #e0e0e0;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .model-item:hover {
+      background: #e8eaf6;
+      border-color: #1a237e;
+    }
+
+    .model-item.selected {
+      background: #1a237e;
+      color: white;
+      border-color: #1a237e;
+    }
+
+    .model-name {
+      font-weight: 600;
       font-size: 14px;
     }
 
-    .status.success {
-      background: #d4edda;
-      border-color: #28a745;
-      color: #155724;
-    }
-
-    .status.error {
-      background: #f8d7da;
-      border-color: #dc3545;
-      color: #721c24;
+    .model-id {
+      font-size: 11px;
+      opacity: 0.7;
+      font-family: 'Courier New', monospace;
+      margin-top: 4px;
     }
 
     .chat-container {
-      height: 400px;
+      height: 450px;
       overflow-y: auto;
-      padding: 20px;
-      background: white;
+      padding: 24px;
+      background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);
+    }
+
+    .chat-container::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .chat-container::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    .chat-container::-webkit-scrollbar-thumb {
+      background: #1a237e;
+      border-radius: 4px;
     }
 
     .message {
-      margin-bottom: 15px;
+      margin-bottom: 20px;
       display: flex;
       flex-direction: column;
+      animation: messageSlide 0.3s ease;
+    }
+
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .message.user {
@@ -148,120 +398,182 @@
     }
 
     .message-content {
-      max-width: 70%;
-      padding: 12px 16px;
+      max-width: 75%;
+      padding: 14px 18px;
       border-radius: 12px;
       word-wrap: break-word;
+      line-height: 1.5;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      white-space: pre-wrap;
     }
 
     .message.user .message-content {
-      background: #667eea;
+      background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
       color: white;
+      border-bottom-right-radius: 4px;
     }
 
     .message.assistant .message-content {
-      background: #f0f0f0;
+      background: white;
       color: #333;
+      border: 2px solid #e0e0e0;
+      border-bottom-left-radius: 4px;
     }
 
     .message-label {
       font-size: 11px;
       color: #999;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
     }
 
     .input-area {
-      padding: 20px;
-      background: #f7f7f7;
-      border-top: 1px solid #e0e0e0;
+      padding: 20px 24px;
+      background: #f5f7fa;
+      border-top: 2px solid #e0e0e0;
       display: flex;
-      gap: 10px;
+      gap: 12px;
     }
 
     #messageInput {
       flex: 1;
-      padding: 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 6px;
+      padding: 14px 16px;
+      border: 2px solid #d0d7de;
+      border-radius: 8px;
       font-size: 14px;
+      transition: all 0.3s;
+    }
+
+    #messageInput:focus {
+      outline: none;
+      border-color: #1a237e;
+      box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
     }
 
     #sendButton {
-      padding: 12px 24px;
-      background: #667eea;
+      padding: 14px 32px;
+      background: #1a237e;
       color: white;
       border: none;
-      border-radius: 6px;
-      font-weight: 600;
+      border-radius: 8px;
+      font-weight: 700;
       cursor: pointer;
+      transition: all 0.3s;
+      letter-spacing: 1px;
     }
 
     #sendButton:hover:not(:disabled) {
-      background: #5568d3;
+      background: #0d47a1;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(26, 35, 126, 0.3);
     }
 
     #sendButton:disabled {
       background: #ccc;
       cursor: not-allowed;
+      transform: none;
     }
 
     .loading {
       display: inline-block;
-      width: 12px;
-      height: 12px;
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid #667eea;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid white;
       border-radius: 50%;
-      animation: spin 1s linear infinite;
+      animation: spin 0.8s linear infinite;
       margin-left: 8px;
+      vertical-align: middle;
     }
 
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    .zen-divider {
+      height: 2px;
+      background: linear-gradient(to right, transparent, #ffd700, transparent);
+      margin: 0;
+    }
+
+    @media (max-width: 768px) {
+      .config-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .connection-indicator {
+        position: static;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>🤖 Local API Chat Client</h1>
-      <p>Connect to your local AI server</p>
+      <div class="connection-indicator">
+        <div class="connection-status" id="connectionStatus">
+          <div class="status-dot" id="statusDot"></div>
+          <span id="statusText">Not Connected</span>
+        </div>
+      </div>
+      <h1>Cynthy's AI</h1>
+      <p>シンシーのAI • Local Server Interface</p>
     </div>
 
+    <div class="zen-divider"></div>
+
     <div class="config-section" id="configSection">
+      <div class="section-title">⚙️ SERVER CONFIGURATION</div>
+      
       <div class="config-grid">
         <div class="input-group">
-          <label for="ipAddress">IP Address</label>
-          <input type="text" id="ipAddress" placeholder="192.168.1.100" value="localhost">
+          <label for="ipAddress">IP Address / Hostname</label>
+          <input type="text" id="ipAddress" placeholder="192.168.1.100 or localhost" value="localhost">
         </div>
         <div class="input-group">
           <label for="port">Port</label>
           <input type="text" id="port" placeholder="8000" value="8000">
         </div>
         <div class="input-group">
-          <label for="apiKey">API Key</label>
-          <input type="password" id="apiKey" placeholder="Your API key">
+          <label for="apiKey">API Key (Optional)</label>
+          <input type="password" id="apiKey" placeholder="sk-...">
         </div>
       </div>
+
       <div class="button-group">
-        <button class="btn-primary" onclick="saveConfig()">Connect</button>
+        <button class="btn-test" onclick="testConnection()">🔍 Test Connection</button>
+        <button class="btn-primary" onclick="saveConfig()">💾 Save & Connect</button>
+        <button class="btn-secondary" onclick="loadModels()">📋 List Models</button>
         <button class="btn-secondary" onclick="toggleConfig()">Hide Config</button>
       </div>
-      <div id="statusMessage"></div>
+
+      <div id="statusMessage" class="status-message"></div>
+      
+      <div id="diagnostics" class="diagnostics">
+        <div class="diagnostics-title">🔧 Connection Diagnostics</div>
+      </div>
+
+      <div id="modelsSection" class="models-section">
+        <div class="models-title">Available Models</div>
+        <div id="modelsList"></div>
+      </div>
     </div>
 
     <div class="chat-container" id="chatContainer">
       <div class="message assistant">
-        <div class="message-label">Assistant</div>
-        <div class="message-content">Hello! Configure your server settings above and start chatting.</div>
+        <div class="message-label">Cynthy's AI</div>
+        <div class="message-content">ようこそ (Welcome)! Configure your server settings above and test the connection to get started.</div>
       </div>
     </div>
 
     <div class="input-area">
-      <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
-      <button id="sendButton" onclick="sendMessage()">Send</button>
+      <input type="text" id="messageInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)" disabled>
+      <button id="sendButton" onclick="sendMessage()" disabled>SEND</button>
     </div>
   </div>
 
@@ -269,10 +581,48 @@
     let config = {
       ip: 'localhost',
       port: '8000',
-      apiKey: ''
+      apiKey: '',
+      selectedModel: null
     };
 
     let isConnected = false;
+    let availableModels = [];
+    let conversationHistory = [];
+
+    // Load saved config on startup
+    window.onload = function() {
+      loadSavedConfig();
+    };
+
+    function loadSavedConfig() {
+      const saved = localStorage.getItem('cynthyAI_config');
+      if (saved) {
+        try {
+          const savedConfig = JSON.parse(saved);
+          document.getElementById('ipAddress').value = savedConfig.ip || 'localhost';
+          document.getElementById('port').value = savedConfig.port || '8000';
+          document.getElementById('apiKey').value = savedConfig.apiKey || '';
+          config = savedConfig;
+          showStatus('📂 Loaded saved configuration. Click "Test Connection" to verify.', 'info');
+        } catch (e) {
+          console.error('Error loading saved config:', e);
+        }
+      }
+      
+      // Load conversation history
+      const savedHistory = localStorage.getItem('cynthyAI_history');
+      if (savedHistory) {
+        try {
+          conversationHistory = JSON.parse(savedHistory);
+          // Restore messages in UI
+          conversationHistory.forEach(msg => {
+            addMessageToUI(msg.role, msg.content);
+          });
+        } catch (e) {
+          console.error('Error loading conversation history:', e);
+        }
+      }
+    }
 
     function saveConfig() {
       const ip = document.getElementById('ipAddress').value.trim();
@@ -280,15 +630,266 @@
       const apiKey = document.getElementById('apiKey').value.trim();
 
       if (!ip || !port) {
-        showStatus('Please enter IP and Port', 'error');
+        showStatus('❌ Please enter both IP address and Port', 'error');
         return;
       }
 
-      config = { ip, port, apiKey };
-      isConnected = true;
-      showStatus('Configuration saved! Ready to chat.', 'success');
+      config.ip = ip;
+      config.port = port;
+      config.apiKey = apiKey;
+
+      localStorage.setItem('cynthyAI_config', JSON.stringify(config));
+      showStatus('✅ Configuration saved to browser storage', 'success');
       
-      localStorage.setItem('apiConfig', JSON.stringify(config));
+      // Auto-test after saving
+      setTimeout(() => testConnection(), 500);
+    }
+
+    function buildUrl(endpoint) {
+      // Clean up the IP address (remove http:// or https:// if present)
+      let cleanIp = config.ip.replace(/^https?:\/\//, '');
+      
+      // Build the URL
+      return `http://${cleanIp}:${config.port}${endpoint}`;
+    }
+
+    async function testConnection() {
+      updateConnectionStatus('testing', 'Testing...');
+      showStatus('🔍 Testing connection to server...', 'info');
+      clearDiagnostics();
+
+      const diagnosticsDiv = document.getElementById('diagnostics');
+      diagnosticsDiv.classList.add('show');
+      
+      const url = buildUrl('/v1/models');
+      
+      addDiagnostic('Target URL', url);
+      addDiagnostic('Method', 'GET');
+      addDiagnostic('API Key', config.apiKey ? '***' + config.apiKey.slice(-4) : 'Not set');
+      
+      try {
+        const startTime = Date.now();
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(config.apiKey && { 'Authorization': `Bearer ${config.apiKey}` })
+          },
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        const responseTime = Date.now() - startTime;
+        
+        addDiagnostic('Response Time', `${responseTime}ms`);
+        addDiagnostic('Status Code', response.status);
+        addDiagnostic('Status Text', response.statusText);
+
+        if (response.ok) {
+          const data = await response.json();
+          addDiagnostic('Response Type', 'Valid JSON');
+          
+          if (data.data && Array.isArray(data.data)) {
+            addDiagnostic('Models Found', data.data.length);
+            availableModels = data.data;
+            isConnected = true;
+            updateConnectionStatus('connected', 'Connected ✓');
+            showStatus(`✅ Connection successful! Found ${data.data.length} model(s). Response time: ${responseTime}ms`, 'success');
+            enableChat();
+            
+            // Auto-select first model if none selected
+            if (!config.selectedModel && data.data.length > 0) {
+              config.selectedModel = data.data[0].id;
+              localStorage.setItem('cynthyAI_config', JSON.stringify(config));
+            }
+            
+            // Auto-display models
+            displayModels(data.data);
+          } else {
+            throw new Error('Invalid response format - no models array found');
+          }
+        } else {
+          const errorText = await response.text();
+          addDiagnostic('Error Details', errorText || 'No error message');
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+      } catch (error) {
+        isConnected = false;
+        updateConnectionStatus('disconnected', 'Connection Failed ✗');
+        
+        addDiagnostic('Error Type', error.name);
+        addDiagnostic('Error Message', error.message);
+        
+        let troubleshootingTips = '';
+        
+        if (error.name === 'AbortError') {
+          troubleshootingTips = '⏱️ Connection timeout (>10s)\n';
+          troubleshootingTips += '• Server may be offline or not responding\n';
+          troubleshootingTips += '• Check if the server is running\n';
+          troubleshootingTips += '• Verify the IP address and port are correct\n';
+        } else if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+          troubleshootingTips = '🔌 Network connection failed\n';
+          troubleshootingTips += '• Check if the server is running: ' + buildUrl('') + '\n';
+          troubleshootingTips += '• Verify CORS is enabled on your server\n';
+          troubleshootingTips += '• Make sure you\'re on the same network (WiFi)\n';
+          troubleshootingTips += '• Try using "localhost" if server is on same machine\n';
+          troubleshootingTips += '• Check your firewall settings\n';
+          troubleshootingTips += '• Try accessing in browser: ' + buildUrl('/v1/models') + '\n';
+        } else if (error.message.includes('401')) {
+          troubleshootingTips = '🔑 Authentication failed\n';
+          troubleshootingTips += '• Check your API key is correct\n';
+          troubleshootingTips += '• API key format should be: sk-...\n';
+        } else if (error.message.includes('404')) {
+          troubleshootingTips = '❓ Endpoint not found\n';
+          troubleshootingTips += '• Endpoint /v1/models not found\n';
+          troubleshootingTips += '• Verify your server supports OpenAI-compatible API\n';
+          troubleshootingTips += '• Check server documentation for correct endpoints\n';
+        } else if (error.message.includes('500')) {
+          troubleshootingTips = '⚠️ Server error\n';
+          troubleshootingTips += '• The server encountered an internal error\n';
+          troubleshootingTips += '• Check server logs for details\n';
+        }
+        
+        addDiagnostic('Troubleshooting', troubleshootingTips);
+        
+        showStatus(`❌ Connection failed: ${error.message}`, 'error');
+        disableChat();
+      }
+    }
+
+    async function loadModels() {
+      if (!config.ip || !config.port) {
+        showStatus('❌ Please configure IP and Port first', 'error');
+        return;
+      }
+
+      showStatus('📋 Loading available models...', 'info');
+      
+      const url = buildUrl('/v1/models');
+      
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(config.apiKey && { 'Authorization': `Bearer ${config.apiKey}` })
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.data && Array.isArray(data.data)) {
+          availableModels = data.data;
+          displayModels(data.data);
+          showStatus(`✅ Found ${data.data.length} model(s)`, 'success');
+          
+          // Auto-select first model if none selected
+          if (!config.selectedModel && data.data.length > 0) {
+            config.selectedModel = data.data[0].id;
+            localStorage.setItem('cynthyAI_config', JSON.stringify(config));
+          }
+        } else {
+          throw new Error('Invalid response format');
+        }
+        
+      } catch (error) {
+        showStatus(`❌ Failed to load models: ${error.message}`, 'error');
+      }
+    }
+
+    function displayModels(models) {
+      const modelsSection = document.getElementById('modelsSection');
+      const modelsList = document.getElementById('modelsList');
+      
+      modelsSection.classList.add('show');
+      modelsList.innerHTML = '';
+      
+      if (models.length === 0) {
+        modelsList.innerHTML = '<div style="color: #999; text-align: center; padding: 20px;">No models available</div>';
+        return;
+      }
+      
+      models.forEach((model, index) => {
+        const modelDiv = document.createElement('div');
+        modelDiv.className = 'model-item';
+        if (config.selectedModel === model.id || (index === 0 && !config.selectedModel)) {
+          modelDiv.classList.add('selected');
+          if (!config.selectedModel) {
+            config.selectedModel = model.id;
+          }
+        }
+        
+        modelDiv.innerHTML = `
+          <div class="model-name">${model.id}</div>
+          ${model.owned_by ? `<div class="model-id">Owner: ${model.owned_by}</div>` : ''}
+        `;
+        
+        modelDiv.onclick = () => selectModel(model.id, modelDiv);
+        modelsList.appendChild(modelDiv);
+      });
+    }
+
+    function selectModel(modelId, element) {
+      config.selectedModel = modelId;
+      localStorage.setItem('cynthyAI_config', JSON.stringify(config));
+      
+      document.querySelectorAll('.model-item').forEach(item => {
+        item.classList.remove('selected');
+      });
+      element.classList.add('selected');
+      
+      showStatus(`✅ Selected model: ${modelId}`, 'success');
+    }
+
+    function updateConnectionStatus(status, text) {
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      
+      statusDot.className = 'status-dot';
+      
+      if (status === 'connected') {
+        statusDot.classList.add('connected');
+      } else if (status === 'testing') {
+        statusDot.classList.add('testing');
+      }
+      
+      statusText.textContent = text;
+    }
+
+    function clearDiagnostics() {
+      const diagnosticsDiv = document.getElementById('diagnostics');
+      diagnosticsDiv.innerHTML = '<div class="diagnostics-title">🔧 Connection Diagnostics</div>';
+    }
+
+    function addDiagnostic(label, value) {
+      const diagnosticsDiv = document.getElementById('diagnostics');
+      const item = document.createElement('div');
+      item.className = 'diagnostic-item';
+      
+      // Handle multi-line values
+      const displayValue = String(value).replace(/\n/g, '<br>');
+      
+      item.innerHTML = `<span class="diagnostic-label">${label}:</span><span class="diagnostic-value">${displayValue}</span>`;
+      diagnosticsDiv.appendChild(item);
+    }
+
+    function enableChat() {
+      document.getElementById('messageInput').disabled = false;
+      document.getElementById('sendButton').disabled = false;
+    }
+
+    function disableChat() {
+      document.getElementById('messageInput').disabled = true;
+      document.getElementById('sendButton').disabled = true;
     }
 
     function toggleConfig() {
@@ -300,29 +901,55 @@
         btn.textContent = 'Hide Config';
       } else {
         configSection.classList.add('hidden');
-        btn.textContent = 'Show Config';
+        btn.textContent = 'Show Config ⚙️';
       }
     }
 
-    function showStatus(message, type = '') {
+    function showStatus(message, type = 'info') {
       const statusDiv = document.getElementById('statusMessage');
       statusDiv.textContent = message;
-      statusDiv.className = 'status ' + type;
+      statusDiv.className = `status-message ${type}`;
       statusDiv.style.display = 'block';
+      
+      // Auto-hide success messages after 5 seconds
+      if (type === 'success') {
+        setTimeout(() => {
+          statusDiv.style.display = 'none';
+        }, 5000);
+      }
     }
 
-    function addMessage(role, content) {
+    function addMessageToUI(role, content) {
       const chatContainer = document.getElementById('chatContainer');
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${role}`;
       
+      const label = role === 'user' ? 'You' : "Cynthy's AI";
+      
       messageDiv.innerHTML = `
-        <div class="message-label">${role === 'user' ? 'You' : 'Assistant'}</div>
-        <div class="message-content">${content}</div>
+        <div class="message-label">${label}</div>
+        <div class="message-content">${escapeHtml(content)}</div>
       `;
       
       chatContainer.appendChild(messageDiv);
       chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function addMessage(role, content) {
+      // Add to UI
+      addMessageToUI(role, content);
+      
+      // Add to history
+      conversationHistory.push({ role, content });
+      
+      // Save to localStorage
+      localStorage.setItem('cynthyAI_history', JSON.stringify(conversationHistory));
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
     }
 
     async function sendMessage() {
@@ -332,71 +959,81 @@
       if (!message) return;
       
       if (!isConnected) {
-        showStatus('Please configure and connect first', 'error');
+        showStatus('❌ Please test connection first', 'error');
         return;
       }
 
       const sendButton = document.getElementById('sendButton');
       sendButton.disabled = true;
-      sendButton.innerHTML = 'Sending<span class="loading"></span>';
+      sendButton.innerHTML = 'SENDING<span class="loading"></span>';
 
       addMessage('user', message);
       input.value = '';
 
       try {
-        const response = await fetch(`http://${config.ip}:${config.port}/v1/chat/completions`, {
+        const modelToUse = config.selectedModel || availableModels[0]?.id || 'gpt-3.5-turbo';
+        
+        const url = buildUrl('/v1/chat/completions');
+        
+        const response = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': config.apiKey ? `Bearer ${config.apiKey}` : ''
+            ...(config.apiKey && { 'Authorization': `Bearer ${config.apiKey}` })
           },
           body: JSON.stringify({
-            messages: [
-              { role: 'user', content: message }
-            ],
-            model: 'default',
-            max_tokens: 2000
+            model: modelToUse,
+            messages: conversationHistory,
+            max_tokens: 2000,
+            temperature: 0.7
           })
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
         const data = await response.json();
-        const assistantMessage = data.choices[0].message.content;
         
-        addMessage('assistant', assistantMessage);
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+          const assistantMessage = data.choices[0].message.content;
+          addMessage('assistant', assistantMessage);
+        } else {
+          throw new Error('Invalid response format from server');
+        }
         
       } catch (error) {
         console.error('Error:', error);
-        addMessage('assistant', `Error: ${error.message}. Make sure your server is running and the config is correct.`);
-        showStatus('Failed to send message. Check console for details.', 'error');
+        
+        // Remove the user message from history since it failed
+        conversationHistory.pop();
+        localStorage.setItem('cynthyAI_history', JSON.stringify(conversationHistory));
+        
+        addMessage('assistant', `❌ Error: ${error.message}\n\nPlease check your connection and try again.`);
+        showStatus(`❌ Failed to send message: ${error.message}`, 'error');
+        
+        // Update connection status
+        isConnected = false;
+        updateConnectionStatus('disconnected', 'Connection Lost ✗');
+        disableChat();
       } finally {
         sendButton.disabled = false;
-        sendButton.textContent = 'Send';
+        sendButton.textContent = 'SEND';
+        
+        // Re-enable if still connected
+        if (isConnected) {
+          enableChat();
+        }
       }
     }
 
     function handleKeyPress(event) {
-      if (event.key === 'Enter') {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
         sendMessage();
       }
     }
-
-    // Load saved config on startup
-    window.onload = function() {
-      const saved = localStorage.getItem('apiConfig');
-      if (saved) {
-        const savedConfig = JSON.parse(saved);
-        document.getElementById('ipAddress').value = savedConfig.ip;
-        document.getElementById('port').value = savedConfig.port;
-        document.getElementById('apiKey').value = savedConfig.apiKey;
-        config = savedConfig;
-        isConnected = true;
-        showStatus('Loaded saved configuration', 'success');
-      }
-    };
   </script>
 </body>
 </html>
