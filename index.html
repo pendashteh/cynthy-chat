@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local API Chat Client</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .config-section {
+      padding: 20px;
+      background: #f7f7f7;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .config-section.hidden {
+      display: none;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    input {
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+    }
+
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #d0d0d0;
+    }
+
+    .status {
+      padding: 10px;
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      margin-top: 15px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .status.success {
+      background: #d4edda;
+      border-color: #28a745;
+      color: #155724;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      border-color: #dc3545;
+      color: #721c24;
+    }
+
+    .chat-container {
+      height: 400px;
+      overflow-y: auto;
+      padding: 20px;
+      background: white;
+    }
+
+    .message {
+      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message.user {
+      align-items: flex-end;
+    }
+
+    .message-content {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      word-wrap: break-word;
+    }
+
+    .message.user .message-content {
+      background: #667eea;
+      color: white;
+    }
+
+    .message.assistant .message-content {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .message-label {
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .input-area {
+      padding: 20px;
+      background: #f7f7f7;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      gap: 10px;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    #sendButton {
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #sendButton:hover:not(:disabled) {
+      background: #5568d3;
+    }
+
+    #sendButton:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🤖 Local API Chat Client</h1>
+      <p>Connect to your local AI server</p>
+    </div>
+
+    <div class="config-section" id="configSection">
+      <div class="config-grid">
+        <div class="input-group">
+          <label for="ipAddress">IP Address</label>
+          <input type="text" id="ipAddress" placeholder="192.168.1.100" value="localhost">
+        </div>
+        <div class="input-group">
+          <label for="port">Port</label>
+          <input type="text" id="port" placeholder="8000" value="8000">
+        </div>
+        <div class="input-group">
+          <label for="apiKey">API Key</label>
+          <input type="password" id="apiKey" placeholder="Your API key">
+        </div>
+      </div>
+      <div class="button-group">
+        <button class="btn-primary" onclick="saveConfig()">Connect</button>
+        <button class="btn-secondary" onclick="toggleConfig()">Hide Config</button>
+      </div>
+      <div id="statusMessage"></div>
+    </div>
+
+    <div class="chat-container" id="chatContainer">
+      <div class="message assistant">
+        <div class="message-label">Assistant</div>
+        <div class="message-content">Hello! Configure your server settings above and start chatting.</div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+      <button id="sendButton" onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    let config = {
+      ip: 'localhost',
+      port: '8000',
+      apiKey: ''
+    };
+
+    let isConnected = false;
+
+    function saveConfig() {
+      const ip = document.getElementById('ipAddress').value.trim();
+      const port = document.getElementById('port').value.trim();
+      const apiKey = document.getElementById('apiKey').value.trim();
+
+      if (!ip || !port) {
+        showStatus('Please enter IP and Port', 'error');
+        return;
+      }
+
+      config = { ip, port, apiKey };
+      isConnected = true;
+      showStatus('Configuration saved! Ready to chat.', 'success');
+      
+      localStorage.setItem('apiConfig', JSON.stringify(config));
+    }
+
+    function toggleConfig() {
+      const configSection = document.getElementById('configSection');
+      const btn = event.target;
+      
+      if (configSection.classList.contains('hidden')) {
+        configSection.classList.remove('hidden');
+        btn.textContent = 'Hide Config';
+      } else {
+        configSection.classList.add('hidden');
+        btn.textContent = 'Show Config';
+      }
+    }
+
+    function showStatus(message, type = '') {
+      const statusDiv = document.getElementById('statusMessage');
+      statusDiv.textContent = message;
+      statusDiv.className = 'status ' + type;
+      statusDiv.style.display = 'block';
+    }
+
+    function addMessage(role, content) {
+      const chatContainer = document.getElementById('chatContainer');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${role}`;
+      
+      messageDiv.innerHTML = `
+        <div class="message-label">${role === 'user' ? 'You' : 'Assistant'}</div>
+        <div class="message-content">${content}</div>
+      `;
+      
+      chatContainer.appendChild(messageDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const message = input.value.trim();
+      
+      if (!message) return;
+      
+      if (!isConnected) {
+        showStatus('Please configure and connect first', 'error');
+        return;
+      }
+
+      const sendButton = document.getElementById('sendButton');
+      sendButton.disabled = true;
+      sendButton.innerHTML = 'Sending<span class="loading"></span>';
+
+      addMessage('user', message);
+      input.value = '';
+
+      try {
+        const response = await fetch(`http://${config.ip}:${config.port}/v1/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': config.apiKey ? `Bearer ${config.apiKey}` : ''
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: 'user', content: message }
+            ],
+            model: 'default',
+            max_tokens: 2000
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const assistantMessage = data.choices[0].message.content;
+        
+        addMessage('assistant', assistantMessage);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        addMessage('assistant', `Error: ${error.message}. Make sure your server is running and the config is correct.`);
+        showStatus('Failed to send message. Check console for details.', 'error');
+      } finally {
+        sendButton.disabled = false;
+        sendButton.textContent = 'Send';
+      }
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    }
+
+    // Load saved config on startup
+    window.onload = function() {
+      const saved = localStorage.getItem('apiConfig');
+      if (saved) {
+        const savedConfig = JSON.parse(saved);
+        document.getElementById('ipAddress').value = savedConfig.ip;
+        document.getElementById('port').value = savedConfig.port;
+        document.getElementById('apiKey').value = savedConfig.apiKey;
+        config = savedConfig;
+        isConnected = true;
+        showStatus('Loaded saved configuration', 'success');
+      }
+    };
+  </script>
+</body>
+</html>
